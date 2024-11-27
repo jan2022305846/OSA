@@ -1,0 +1,72 @@
+-- Students Table
+CREATE TABLE Students (
+    student_id INT(10) PRIMARY KEY,
+    first_name TEXT(20) NOT NULL,
+    last_name TEXT(20) NOT NULL,
+    email VARCHAR(30) UNIQUE NOT NULL,
+    section VARCHAR(2),
+    c_num VARCHAR(11),
+    dept_id INT(3) NOT NULL,
+    FOREIGN KEY (dept_id) REFERENCES Department(dept_id)
+);
+
+-- Admin Table
+CREATE TABLE Admin (
+    admin_id INT(10) PRIMARY KEY,
+    first_name TEXT(20) NOT NULL,
+    last_name TEXT(20) NOT NULL,
+    email VARCHAR(30) UNIQUE NOT NULL
+);
+
+-- Student Credentials Table
+CREATE TABLE StudentCredentials (
+    cred_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT(10) NOT NULL UNIQUE,
+    password VARCHAR(60) NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id)
+);
+
+-- Admin Credentials Table
+CREATE TABLE AdminCredentials (
+    cred_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT(10) NOT NULL UNIQUE,
+    password VARCHAR(60) NOT NULL,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
+);
+
+-- Department Table
+CREATE TABLE Department (
+    dept_id INT(3) PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    description VARCHAR(100)
+);
+
+-- Complaint Status Table
+CREATE TABLE ComplaintStatus (
+    status_id INT AUTO_INCREMENT PRIMARY KEY,
+    status_name VARCHAR(20) NOT NULL UNIQUE
+);
+
+-- Complaints Table
+CREATE TABLE Complaints (
+    complaint_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT(10) NOT NULL,
+    dept_id INT(3) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    description VARCHAR(255),
+    status_id INT NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (dept_id) REFERENCES Department(dept_id),
+    FOREIGN KEY (status_id) REFERENCES ComplaintStatus(status_id)
+);
+
+-- Complaint Notes Table
+CREATE TABLE ComplaintNotes (
+    note_id INT AUTO_INCREMENT PRIMARY KEY,
+    complaint_id INT(10) NOT NULL,
+    admin_id INT(10) NOT NULL,
+    note VARCHAR(255) NOT NULL,
+    FOREIGN KEY (complaint_id) REFERENCES Complaints(complaint_id),
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
+);
