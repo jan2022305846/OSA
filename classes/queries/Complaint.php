@@ -344,7 +344,7 @@ class Complaint
         return $complaints;
     }
 
-    public function processComplaint($complaintId, $note, $statusId) {
+    public function processComplaint($complaintId, $note, $statusId, $adminId) {
         // Update complaint status
         $updateStatusQuery = "UPDATE Complaints SET status_id = $statusId WHERE complaint_id = $complaintId";
         if (!$this->db->query($updateStatusQuery)) {
@@ -363,7 +363,7 @@ class Complaint
             }
         } else {
             // Insert new note
-            $insertNoteQuery = "INSERT INTO ComplaintNotes (complaint_id, admin_id, note) VALUES ($complaintId, 1, '$note')";
+            $insertNoteQuery = "INSERT INTO ComplaintNotes (complaint_id, admin_id, note) VALUES ($complaintId, $adminId, '$note')";
             if (!$this->db->query($insertNoteQuery)) {
                 return false; // Return false if the note insertion fails
             }
@@ -371,6 +371,5 @@ class Complaint
     
         return true; // Return true if all operations succeed
     }
-    
     
 }

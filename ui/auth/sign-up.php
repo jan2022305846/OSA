@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['success'] = 'Registration successful!';
             $_SESSION['student_id'] = $student_id;
             $_SESSION['first_name'] = $first_name;
-            header('Location: ../userdashboard.php'); // Redirect to dashboard
+            header('Location: ../dashboard/userdashboard.php'); // Redirect to dashboard
             exit;
         } else {
             $_SESSION['error'] = 'Registration failed. Student ID already exists.';

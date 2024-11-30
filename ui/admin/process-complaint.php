@@ -1,4 +1,8 @@
 <?php
+
+?>
+session_start();
+
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
 
@@ -29,9 +33,10 @@ if (!$currentComplaint || !$statuses) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newNote = $_POST['note'] ?? '';
     $newStatus = intval($_POST['status']);
+    $adminId = $_SESSION['admin_id']; // Assuming admin_id is stored in the session
 
     // Update note and status in the database
-    if ($complaint->processComplaint($complaintId, $newNote, $newStatus)) {
+    if ($complaint->processComplaint($complaintId, $newNote, $newStatus, $adminId)) {
         echo "<p class='text-success'>Complaint updated successfully.</p>";
     } else {
         echo "<p class='text-danger'>Failed to update complaint.</p>";
