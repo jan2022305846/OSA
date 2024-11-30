@@ -1,8 +1,15 @@
+-- Department Table (create first since other tables reference it)
+CREATE TABLE Department (
+    dept_id INT(3) PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    description VARCHAR(100)
+);
+
 -- Students Table
 CREATE TABLE Students (
-    student_id INT(10) PRIMARY KEY,
-    first_name TEXT(20) NOT NULL,
-    last_name TEXT(20) NOT NULL,
+    student_id INT(10) PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(20) NOT NULL,
+    last_name VARCHAR(20) NOT NULL,
     email VARCHAR(30) UNIQUE NOT NULL,
     section VARCHAR(2),
     c_num VARCHAR(11),
@@ -12,9 +19,9 @@ CREATE TABLE Students (
 
 -- Admin Table
 CREATE TABLE Admin (
-    admin_id INT(10) PRIMARY KEY,
-    first_name TEXT(20) NOT NULL,
-    last_name TEXT(20) NOT NULL,
+    admin_id INT(10) PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(20) NOT NULL,
+    last_name VARCHAR(20) NOT NULL,
     email VARCHAR(30) UNIQUE NOT NULL
 );
 
@@ -32,13 +39,6 @@ CREATE TABLE AdminCredentials (
     admin_id INT(10) NOT NULL UNIQUE,
     password VARCHAR(60) NOT NULL,
     FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
-);
-
--- Department Table
-CREATE TABLE Department (
-    dept_id INT(3) PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    description VARCHAR(100)
 );
 
 -- Complaint Status Table
