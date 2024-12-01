@@ -1,70 +1,65 @@
 <?php
+require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
+require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Session.php';
+
 // Check if student is logged in
 if (!isset($_SESSION['student_id'])) {
     echo "<p class='text-danger'>Error: Required data not available.</p>";
     exit;
 }
+
 $firstName = isset($_SESSION['first_name']) ? htmlspecialchars($_SESSION['first_name']) : 'Student';
 
-// Include database configuration and Complaint model
-require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
-require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
-
-// Initialize database and Complaint model
 $database = new Database();
 $db = $database->getConnection();
 $complaint = new Complaint($db);
 
-$message = '';
-$messageType = '';
+// Get complaint ID and details
+$complaintId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$currentComplaint = $complaint->getComplaintById($complaintId);
 
-// Check if there is an 'id' in the URL for updating a complaint
-if (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    $complaintId = $_GET['id'];
-
-    // Fetch the complaint details by its ID
-    $currentComplaint = $complaint->getComplaintById($complaintId);
-    if (!$currentComplaint) {
-        echo "<p class='text-danger'>Complaint not found.</p>";
-        exit;
-    }
-} else {
-    echo "<p class='text-danger'>Complaint ID not provided.</p>";
+if (!$currentComplaint) {
+    echo "<p class='text-danger'>Complaint not found.</p>";
     exit;
 }
 
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitize and validate input
-    $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING);
-    $description = filter_input(INPUT_POST, 'description', FILTER_SANITIZE_STRING);
+    try {
+        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING);
+        $description = filter_input(INPUT_POST, 'description', FILTER_SANITIZE_STRING);
+        $studentId = $currentComplaint['student_id'];
+        
+        $uploadDir = '../../uploads/';
+        $documentPath = null;
+        $evidencePaths = [];
 
-    if (empty($type) || empty($description)) {
-        $message = "All fields are required.";
-        $messageType = "danger";
-    } else {
-        $studentId = $_SESSION['student_id'];
-
-        try {
-            // Call the updateComplaint method
-            $result = $complaint->updateComplaint($complaintId, $studentId, $type, $description);
-
-            if ($result) {
-                $message = "Complaint updated successfully.";
-                $messageType = "success";
-                echo "<script>
-                    alert('$message');
-                    window.location.href = 'userdashboard.php';
-                </script>";
-                exit;
-            } else {
-                $message = "Failed to update complaint. Please try again.";
-                $messageType = "danger";
-            }
-        } catch (Exception $e) {
-            $message = "Error: " . $e->getMessage();
-            $messageType = "danger";
+        // Handle document upload
+        if (isset($_FILES['document']) && !empty($_FILES['document']['name'])) {
+            $documentName = uniqid() . '-' . basename($_FILES['document']['name']);
+            $documentPath = $uploadDir . $documentName;
+            move_uploaded_file($_FILES['document']['tmp_name'], $documentPath);
         }
+
+        // Handle evidence uploads
+        if (isset($_FILES['evidence']) && !empty($_FILES['evidence']['name'][0])) {
+            foreach ($_FILES['evidence']['tmp_name'] as $key => $tmpName) {
+                $evidenceName = uniqid() . '-' . basename($_FILES['evidence']['name'][$key]);
+                $evidencePath = $uploadDir . $evidenceName;
+                if (move_uploaded_file($tmpName, $evidencePath)) {
+                    $evidencePaths[] = $evidencePath;
+                }
+            }
+        }
+
+        // Update complaint
+        if ($complaint->updateComplaint($complaintId, $studentId, $type, $description, $documentPath, $evidencePaths)) {
+            echo "<script>alert('Complaint updated successfully.'); window.location.href = 'update-complaint.php?id=$complaintId';</script>";
+            exit;
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
 }
 ?>
@@ -105,33 +100,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <!-- Main Content -->
         <main id="main-content" class="p-3 flex-grow-1">
-          <div class="update-complaint">
-              <h3>Update Complaint</h3>
+            <div class="update-complaint">
+                <h3>Update Complaint</h3>
 
-              <?php if (!empty($message)): ?>
-                  <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
-                      <?= htmlspecialchars($message) ?>
-                  </div>
-              <?php endif; ?>
+                <?php if (!empty($message)): ?>
+                    <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
+                        <?= htmlspecialchars($message) ?>
+                    </div>
+                <?php endif; ?>
 
-              <form action="update-complaint.php?id=<?= $complaintId ?>" method="POST">
-                  <div class="mb-3">
-                      <label for="type" class="form-label">Complaint Type</label>
-                      <select class="form-control" id="type" name="type" required>
-                          <option value="">Select Type</option>
-                          <option value="Academic" <?= $currentComplaint['type'] === 'Academic' ? 'selected' : '' ?>>Academic</option>
-                          <option value="Administrative" <?= $currentComplaint['type'] === 'Administrative' ? 'selected' : '' ?>>Administrative</option>
-                          <option value="Facility" <?= $currentComplaint['type'] === 'Facility' ? 'selected' : '' ?>>Facility</option>
-                          <option value="Other" <?= $currentComplaint['type'] === 'Other' ? 'selected' : '' ?>>Other</option>
-                      </select>
-                  </div>
-                  <div class="mb-3">
-                      <label for="description" class="form-label">Description</label>
-                      <textarea class="form-control" id="description" name="description" rows="4" required><?= htmlspecialchars($currentComplaint['description']) ?></textarea>
-                  </div>
-                  <button type="submit" class="btn btn-primary">Update Complaint</button>
-              </form>
-          </div>
+                <form action="update-complaint.php?id=<?= $complaintId ?>" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Complaint Type</label>
+                        <select class="form-control" id="type" name="type" required>
+                            <option value="">Select Type</option>
+                            <option value="Academic" <?= $currentComplaint['type'] === 'Academic' ? 'selected' : '' ?>>Academic</option>
+                            <option value="Administrative" <?= $currentComplaint['type'] === 'Administrative' ? 'selected' : '' ?>>Administrative</option>
+                            <option value="Facility" <?= $currentComplaint['type'] === 'Facility' ? 'selected' : '' ?>>Facility</option>
+                            <option value="Other" <?= $currentComplaint['type'] === 'Other' ? 'selected' : '' ?>>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2" required><?= htmlspecialchars($currentComplaint['description']) ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="document" class="form-label">Upload Document (Optional)</label>
+                        <input type="file" class="form-control" id="document" name="document">
+                    </div>
+                    <div class="mb-3">
+                        <label for="evidence" class="form-label">Upload Evidence Files (Optional)</label>
+                        <input type="file" class="form-control" id="evidence" name="evidence[]" multiple>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Complaint</button>
+                </form>
+            </div>
         </main>
     </div>
 

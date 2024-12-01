@@ -1,8 +1,5 @@
 <?php
 
-?>
-session_start();
-
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
 
@@ -23,6 +20,8 @@ if (!$complaintId) {
 $currentComplaint = $complaint->getComplaintById($complaintId);
 $note = $complaint->getComplaintNote($complaintId);
 $statuses = $complaint->getStatuses();
+$documents = $complaint->getDocuments($complaintId);
+$evidenceFiles = $complaint->getEvidenceFiles($complaintId);
 
 // Debugging output
 if (!$currentComplaint || !$statuses) {
@@ -45,10 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Refresh current data
     $note = $complaint->getComplaintNote($complaintId);
     $currentComplaint['status_id'] = $newStatus;
+    $documents = $complaint->getDocuments($complaintId);
+    $evidenceFiles = $complaint->getEvidenceFiles($complaintId);
 }
 ?>
 
-<!-- admin_dashboard.php -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,6 +100,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="note" class="form-label">Leave a Note:</label>
                     <textarea class="form-control" id="note" name="note" rows="5"><?= htmlspecialchars($note['note'] ?? '') ?></textarea>
                 </div>
+
+                <!-- Display documents -->
+                <?php if (!empty($documents)): ?>
+                    <div class="mb-3">
+                        <label class="form-label">Documents:</label>
+                        <ul>
+                            <?php foreach ($documents as $doc): ?>
+                                <li><a href="<?= htmlspecialchars($doc) ?>" target="_blank"><?= htmlspecialchars(basename($doc)) ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Display evidence files -->
+                <?php if (!empty($evidenceFiles)): ?>
+                    <div class="mb-3">
+                        <label class="form-label">Evidence Files:</label>
+                        <ul>
+                            <?php foreach ($evidenceFiles as $evidence): ?>
+                                <li><a href="<?= htmlspecialchars($evidence) ?>" target="_blank"><?= htmlspecialchars(basename($evidence)) ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
                 <button type="submit" class="btn btn-primary">Save Changes</button>
                 <a href="admin-dashboard.php" class="btn btn-secondary">Back</a>
             </form>

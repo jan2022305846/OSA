@@ -70,3 +70,13 @@ CREATE TABLE ComplaintNotes (
     FOREIGN KEY (complaint_id) REFERENCES Complaints(complaint_id),
     FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
 );
+
+-- Complaints Files Table
+CREATE TABLE ComplaintFiles (
+    file_id INT AUTO_INCREMENT PRIMARY KEY,
+    complaint_id INT(10) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_type ENUM('document', 'evidence') NOT NULL,
+    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (complaint_id) REFERENCES Complaints(complaint_id) ON DELETE CASCADE
+);

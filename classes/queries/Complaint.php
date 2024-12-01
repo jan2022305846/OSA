@@ -41,22 +41,22 @@ class Complaint
         }
     }
 
-    public function submitComplaint($studentId, $type, $description)
+    public function submitComplaint($studentId, $type, $description, $documentPath = null, $evidencePaths = [])
     {
         // Sanitize inputs
         $type = htmlspecialchars(strip_tags($type));
         $description = htmlspecialchars(strip_tags($description));
-
+    
         // Fetch the default status_id for 'Pending'
         $queryStatus = "SELECT status_id FROM ComplaintStatus WHERE status_name = 'Pending' LIMIT 1";
         $result = $this->db->query($queryStatus);
-
+    
         if ($result && $row = $result->fetch_assoc()) {
             $statusId = $row['status_id'];
         } else {
             throw new Exception("Default status 'Pending' not found in ComplaintStatus table.");
         }
-
+    
         // Fetch the department ID for the student
         $queryDept = "SELECT dept_id FROM Students WHERE student_id = ? LIMIT 1";
         $stmtDept = $this->db->prepare($queryDept);
@@ -64,7 +64,7 @@ class Complaint
             $stmtDept->bind_param('i', $studentId);
             $stmtDept->execute();
             $resultDept = $stmtDept->get_result();
-
+    
             if ($resultDept && $row = $resultDept->fetch_assoc()) {
                 $deptId = $row['dept_id'];
             } else {
@@ -75,33 +75,66 @@ class Complaint
         } else {
             throw new Exception("Error preparing department query: " . $this->db->error);
         }
-
+    
         // Insert the complaint
         $queryInsert = "
             INSERT INTO Complaints (student_id, dept_id, type, description, status_id)
             VALUES (?, ?, ?, ?, ?)";
-
+    
         $stmtInsert = $this->db->prepare($queryInsert);
         if ($stmtInsert) {
             $stmtInsert->bind_param('iissi', $studentId, $deptId, $type, $description, $statusId);
-
-            // Debug values before executing
-            var_dump($studentId, $deptId, $type, $description, $statusId);
-
+    
             if ($stmtInsert->execute()) {
-                echo "Insert successful!";
+                // Get the last inserted complaint_id
+                $complaintId = $stmtInsert->insert_id;
                 $stmtInsert->close();
-                return true;// Complaint submitted successfully
+    
+                // Insert the document file into ComplaintFiles (if provided)
+                if (!empty($documentPath)) {
+                    $fileInsertQuery = "INSERT INTO ComplaintFiles (complaint_id, file_path, file_type) VALUES (?, ?, ?)";
+                    $stmtFile = $this->db->prepare($fileInsertQuery);
+                    if ($stmtFile) {
+                        $fileType = 'document';
+                        $stmtFile->bind_param('iss', $complaintId, $documentPath, $fileType);
+    
+                        if (!$stmtFile->execute()) {
+                            throw new Exception("Failed to insert document file: " . $stmtFile->error);
+                        }
+                        $stmtFile->close();
+                    } else {
+                        throw new Exception("Error preparing file insertion query: " . $this->db->error);
+                    }
+                }
+    
+                // Insert evidence files into ComplaintFiles (if provided)
+                if (!empty($evidencePaths)) {
+                    $fileInsertQuery = "INSERT INTO ComplaintFiles (complaint_id, file_path, file_type) VALUES (?, ?, ?)";
+                    $stmtFile = $this->db->prepare($fileInsertQuery);
+                    if ($stmtFile) {
+                        foreach ($evidencePaths as $evidencePath) {
+                            $fileType = 'evidence';
+                            $stmtFile->bind_param('iss', $complaintId, $evidencePath, $fileType);
+    
+                            if (!$stmtFile->execute()) {
+                                throw new Exception("Failed to insert evidence file: " . $stmtFile->error);
+                            }
+                        }
+                        $stmtFile->close();
+                    } else {
+                        throw new Exception("Error preparing evidence file insertion query: " . $this->db->error);
+                    }
+                }
+    
+                return true; // Complaint and files submitted successfully
             } else {
-                echo "Insert failed: " . $stmtInsert->error;
-                $stmtInsert->close();
-                return false;
+                throw new Exception("Failed to insert complaint: " . $stmtInsert->error);
             }
         } else {
             throw new Exception("Error preparing complaint insertion query: " . $this->db->error);
         }
     }
-
+    
     public function getComplaintHistory($studentId)
     {
         $query = "
@@ -178,64 +211,134 @@ class Complaint
         }
     }
 
-    public function updateComplaint($complaintId, $studentId, $type, $description)
-    {
-        // Sanitize inputs
-        $type = htmlspecialchars(strip_tags($type));
-        $description = htmlspecialchars(strip_tags($description));
-
-        // Fetch the default status_id for 'Pending' (if necessary)
-        $queryStatus = "SELECT status_id FROM ComplaintStatus WHERE status_name = 'Pending' LIMIT 1";
-        $result = $this->db->query($queryStatus);
-
-        if ($result && $row = $result->fetch_assoc()) {
-            $statusId = $row['status_id'];
-        } else {
-            throw new Exception("Default status 'Pending' not found in ComplaintStatus table.");
-        }
-
-        // Update the complaint
-        $queryUpdate = "
-            UPDATE Complaints
-            SET type = ?, description = ?, status_id = ?
-            WHERE complaint_id = ? AND student_id = ?";
-
-        $stmtUpdate = $this->db->prepare($queryUpdate);
-        if ($stmtUpdate) {
-            $stmtUpdate->bind_param('ssiii', $type, $description, $statusId, $complaintId, $studentId);
-
-            // Debug values before executing
-            var_dump($type, $description, $statusId, $complaintId, $studentId);
-
-            if ($stmtUpdate->execute()) {
-                $stmtUpdate->close();
-                return true;  // Complaint updated successfully
+    public function updateComplaint($complaintId, $studentId, $type, $description, $documentPath = null, $evidencePaths = []) {
+        try {
+            // Sanitize inputs
+            $type = htmlspecialchars(strip_tags($type));
+            $description = htmlspecialchars(strip_tags($description));
+    
+            // Fetch the default status_id for 'Pending'
+            $queryStatus = "SELECT status_id FROM ComplaintStatus WHERE status_name = 'Pending' LIMIT 1";
+            $result = $this->db->query($queryStatus);
+    
+            if ($result && $row = $result->fetch_assoc()) {
+                $statusId = $row['status_id'];
             } else {
-                $stmtUpdate->close();
-                return false;  // Failed to update
+                throw new Exception("Default status 'Pending' not found in ComplaintStatus table.");
             }
-        } else {
-            throw new Exception("Error preparing complaint update query: " . $this->db->error);
+    
+            // Update the complaint details
+            $queryUpdate = "
+                UPDATE Complaints
+                SET type = ?, description = ?, status_id = ?
+                WHERE complaint_id = ? AND student_id = ?";
+            $stmtUpdate = $this->db->prepare($queryUpdate);
+    
+            if ($stmtUpdate) {
+                $stmtUpdate->bind_param('ssiii', $type, $description, $statusId, $complaintId, $studentId);
+    
+                if (!$stmtUpdate->execute()) {
+                    throw new Exception("Error updating complaint: " . $stmtUpdate->error);
+                }
+                $stmtUpdate->close();
+            } else {
+                throw new Exception("Error preparing complaint update query: " . $this->db->error);
+            }
+    
+            // Handle document file (if provided)
+            if ($documentPath) {
+                $this->insertFile($complaintId, $documentPath, 'document');
+            }
+    
+            // Handle evidence files (if provided)
+            foreach ($evidencePaths as $evidencePath) {
+                $this->insertFile($complaintId, $evidencePath, 'evidence');
+            }
+    
+            return true;
+        } catch (Exception $e) {
+            error_log("Error in updateComplaint: " . $e->getMessage());
+            return false;
         }
     }
-
-    public function getComplaintById($complaintId)
-    {
-        $query = "SELECT * FROM Complaints WHERE complaint_id = ? LIMIT 1";
-        $stmt = $this->db->prepare($query);
-        if ($stmt) {
-            $stmt->bind_param('i', $complaintId);
+    
+    /**
+     * Helper method to insert a file into ComplaintFiles table.
+     */
+    private function insertFile($complaintId, $filePath, $fileType) {
+        $queryInsertFile = "
+            INSERT INTO ComplaintFiles (complaint_id, file_path, file_type)
+            VALUES (?, ?, ?)";
+        $stmtInsertFile = $this->db->prepare($queryInsertFile);
+    
+        if ($stmtInsertFile) {
+            $stmtInsertFile->bind_param('iss', $complaintId, $filePath, $fileType);
+    
+            if (!$stmtInsertFile->execute()) {
+                throw new Exception("Error inserting file: " . $stmtInsertFile->error);
+            }
+            $stmtInsertFile->close();
+        } else {
+            throw new Exception("Error preparing file insert query: " . $this->db->error);
+        }
+    }
+    
+        // Fetch the document files associated with a complaint
+        public function getDocuments($complaintId) {
+            $stmt = $this->db->prepare("SELECT file_path FROM ComplaintFiles WHERE complaint_id = ? AND file_type = 'document'");
+            if (!$stmt) {
+                error_log("Failed to prepare statement: " . $this->db->error);
+                return [];
+            }
+            $stmt->bind_param("i", $complaintId);
+            if (!$stmt->execute()) {
+                error_log("Failed to execute statement: " . $stmt->error);
+                return [];
+            }
+            $result = $stmt->get_result();
+            
+            $documents = [];
+            while ($row = $result->fetch_assoc()) {
+                $documents[] = $row['file_path'];
+            }
+            return $documents;
+        }
+        public function getEvidenceFiles($complaintId) {
+            $stmt = $this->db->prepare("SELECT file_path FROM ComplaintFiles WHERE complaint_id = ? AND file_type = 'evidence'");
+            if (!$stmt) {
+                return [];
+            }
+            $stmt->bind_param("i", $complaintId);
             $stmt->execute();
             $result = $stmt->get_result();
-            if ($result && $row = $result->fetch_assoc()) {
-                return $row;  // Return the complaint details
-            } else {
-                return null;  // Complaint not found
+        
+            $evidenceFiles = [];
+            while ($row = $result->fetch_assoc()) {
+                $evidenceFiles[] = $row['file_path'];
             }
-        } else {
-            throw new Exception("Error preparing complaint fetch query: " . $this->db->error);
+            return $evidenceFiles;
         }
+
+    public function getComplaintById($complaintId) {
+        $query = "SELECT c.*, 
+                            GROUP_CONCAT(CASE WHEN f.file_type = 'document' THEN f.file_path END) AS documents,
+                            GROUP_CONCAT(CASE WHEN f.file_type = 'evidence' THEN f.file_path END) AS evidence_files
+                    FROM Complaints c
+                    LEFT JOIN ComplaintFiles f ON c.complaint_id = f.complaint_id
+                    WHERE c.complaint_id = ?
+                    GROUP BY c.complaint_id";
+    
+        $stmt = $this->db->prepare($query);
+        $stmt->bind_param('i', $complaintId);
+    
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            return $result->fetch_assoc();
+        }
+    
+        return null;
     }
+    
 
     public function getComplaintNote($complaintId)
     {

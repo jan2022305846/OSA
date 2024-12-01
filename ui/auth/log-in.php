@@ -95,7 +95,6 @@
 
         <div class="login-links">
             <p><a href="admin-login.php">Admin Login</a></p>
-            <p><a href="recovery.php">Forgot Password?</a></p>
             <p><a href="sign-up.php">Don't have an account? Sign Up</a></p>
         </div>
     </div>
