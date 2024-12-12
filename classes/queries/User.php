@@ -111,5 +111,93 @@ class UserQueries
         return $departments;
     }
     
+    public function getAllStudents() {
+        $query = 'SELECT s.*, d.name AS department_name FROM Students s LEFT JOIN Department d ON s.dept_id = d.dept_id';
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $students = [];
+        while ($row = $result->fetch_assoc()) {
+            $students[] = $row;
+        }
+        $stmt->close();
+        return $students;
+    }
+    
+    public function searchStudents($search, $department) {
+        $query = 'SELECT s.*, d.name AS department_name FROM Students s LEFT JOIN Department d ON s.dept_id = d.dept_id WHERE 1=1';
+        $params = [];
+        $types = '';
+    
+        if (!empty($search)) {
+            $query .= ' AND (s.student_id LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ?)';
+            $searchParam = "%$search%";
+            $params[] = $searchParam;
+            $params[] = $searchParam;
+            $params[] = $searchParam;
+            $types .= 'sss';
+        }
+    
+        if (!empty($department)) {
+            $query .= ' AND s.dept_id = ?';
+            $params[] = $department;
+            $types .= 'i';
+        }
+    
+        $stmt = $this->conn->prepare($query);
+        if ($stmt) {
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $students = [];
+            while ($row = $result->fetch_assoc()) {
+                $students[] = $row;
+            }
+            $stmt->close();
+            return $students;
+        } else {
+            throw new Exception('Query preparation failed: ' . $this->conn->error);
+        }
+    }
+
+    public function deleteStudent($studentId)
+    {
+        // Start a transaction
+        $this->conn->begin_transaction();
+
+        try {
+            // Delete related records in StudentCredentials table
+            $query = 'DELETE FROM StudentCredentials WHERE student_id = ?';
+            $stmt = $this->conn->prepare($query);
+            if ($stmt) {
+                $stmt->bind_param('i', $studentId);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                throw new Exception('Query preparation failed: ' . $this->conn->error);
+            }
+
+            // Delete the student record
+            $query = 'DELETE FROM Students WHERE student_id = ?';
+            $stmt = $this->conn->prepare($query);
+            if ($stmt) {
+                $stmt->bind_param('i', $studentId);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                throw new Exception('Query preparation failed: ' . $this->conn->error);
+            }
+
+            // Commit the transaction
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            // Rollback the transaction on error
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
 }
 ?>

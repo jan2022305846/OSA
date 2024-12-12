@@ -13,7 +13,7 @@ if (!isset($_SESSION['admin_id'])) {
 
 // Map each section to a specific PHP file within the same folder
 $section = $_GET['section'] ?? 'dashboard';  // Default to 'dashboard' if no section is specified
-$allowedSections = ['dashboard', 'manage-complaint', 'account-settings'];  // List of allowed sections
+$allowedSections = ['dashboard', 'manage-complaint', 'account-settings', 'manage-students'];  // List of allowed sections
 
 // Validate the requested section
 if (in_array($section, $allowedSections)) {

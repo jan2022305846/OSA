@@ -8,6 +8,7 @@
     <title>Admin Dashboard - Complaint Management System</title>
     <link rel="stylesheet" href="../../assets/css/admin.css">
     <link href="../../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <script src="../../assets/js/jquery.js" defer></script>
 </head>
 <body>
 <header class="d-flex justify-content-between align-items-center">
@@ -28,6 +29,7 @@
             </div>
             <nav class="nav flex-column">
                 <a href="#" data-section="dashboard" class="nav-link active">Dashboard</a>
+                <a href="#" data-section="manage-students" class="nav-link">Manage Students</a>
                 <a href="#" data-section="manage-complaint" class="nav-link">Manage Complaints</a>
                 <a href="#" data-section="account-settings" class="nav-link">Account Settings</a>
             </nav>

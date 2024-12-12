@@ -2,17 +2,37 @@
 
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
+require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/User.php';
 
 // Initialize database and Complaint model
 $database = new Database();
 $db = $database->getConnection();
 $complaint = new Complaint($db);
+$user = new UserQueries($db);
 
 // Fetch complaint details
 $complaintId = isset($_GET['id']) ? intval($_GET['id']) : null;
 
 if (!$complaintId) {
     echo "<p class='text-danger'>Error: Complaint ID is required.</p>";
+    exit;
+}
+
+$currentComplaint = $complaint->getComplaintById($complaintId);
+
+if (!$currentComplaint) {
+    echo "<p class='text-danger'>Error: Complaint not found.</p>";
+    exit;
+}
+
+// Get student ID from the complaint
+$studentId = $currentComplaint['student_id'];
+
+// Get student details using Student class
+$student = $user->getUserByStudentId($studentId);
+
+if (!$student) {
+    echo "<p class='text-danger'>Error: Student not found.</p>";
     exit;
 }
 
@@ -86,6 +106,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <main id="main-content" class="p-3 flex-grow-1">
         <h3>Process Complaint</h3>
             <form method="post">
+                <div class="row mb-3">
+                    <div class="col">
+                        <label for="student_id" class="form-label">Student ID</label>
+                        <input type="text" class="form-control" id="student_id" value="<?= htmlspecialchars($student['student_id']); ?>" readonly>
+                    </div>
+                    <div class="col">
+                        <label for="student_name" class="form-label">Student Name</label>
+                        <input type="text" class="form-control" id="student_name" value="<?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>" readonly>
+                    </div>
+                </div>
                 <div class="mb-3">
                     <label for="status" class="form-label">Update Status</label>
                     <select class="form-control" id="status" name="status" required>

@@ -2,12 +2,13 @@
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Session.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/includes/Database.php';
 require_once 'C:/xampp/htdocs/OSA FINAL OOP/classes/queries/Complaint.php';
-
 // Check if student is logged in
 if (!isset($_SESSION['student_id'])) {
     echo "<p class='text-danger'>Error: Required data not available.</p>";
     exit;
 }
+
+$studentName = isset($_SESSION['first_name']) ? htmlspecialchars($_SESSION['first_name']) : 'Student';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -87,6 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="alert alert-<?= htmlspecialchars($messageType); ?>"><?= htmlspecialchars($message); ?></div>
     <?php endif; ?>
     <form action="submit-complaint.php" method="POST" enctype="multipart/form-data">
+        <div class="mb-1">
+            <label for="student_id" class="form-label">Student ID</label>
+            <input type="text" class="form-control" id="student_id" name="student_id" value="<?= $_SESSION['student_id']; ?>" readonly>
+            <label for="student_name" class="form-label">Student Name</label>
+            <input type="text" class="form-control" id="student_name" name="student_name" value="<?= $studentName; ?>" readonly>
+        </div>
         <div class="mb-3">
             <label for="type" class="form-label">Complaint Type</label>
             <select class="form-control" id="type" name="type" required>
